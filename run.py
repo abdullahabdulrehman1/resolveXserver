@@ -1,10 +1,10 @@
-from flask import Flask, jsonify
+from app import create_app
 
-app = Flask(__name__)
+app = create_app()
 
-@app.route('/')
-def index():
-    return jsonify({"message": "Hello, World!"})
+@app.route("/")
+def home():
+    return "Hello, World!"
 
-if __name__ == '__main__':
-    app.run()
+if __name__ == "__main__":
+    app.run(debug=True)

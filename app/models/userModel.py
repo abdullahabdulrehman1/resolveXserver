@@ -16,6 +16,8 @@ class User:
             "email": email,
             "password": generate_password_hash(password),  # Hash password before saving
             "user_type": user_type,
+            "otp_request_count": 0,  # Initialize OTP request count
+            "last_request_time": None  # Initialize last request time
         }
         user_data.update(extra_fields)  # Add additional fields
 
@@ -45,6 +47,10 @@ class User:
             return mongo.db.users.find_one({"_id": ObjectId(user_id)})
         except:
             return None
+    @staticmethod
+    def update_user_by_id(user_id, update_data):
+        """Update a user by ID"""
+        return mongo.db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
 
 
 class Individual(User):

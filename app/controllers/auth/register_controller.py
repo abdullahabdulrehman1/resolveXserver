@@ -1,8 +1,11 @@
-from flask import request, jsonify
+from flask import jsonify, request
+from flask_jwt_extended import create_access_token, create_refresh_token
 from marshmallow import ValidationError
-from app.libs.authhelper import generate_token, generate_refresh_token
-from app.models.userModel import User, Individual, Organization, Department
-from app.schemas.user_schema import UserSchema, OrganizationSchema, DepartmentSchema
+
+from app.libs.error_helper import handle_error
+from app.models.userModel import Department, Individual, Organization, User
+from app.schemas.user_schema import (DepartmentSchema, OrganizationSchema,
+                                     UserSchema)
 
 
 def register():
@@ -11,12 +14,12 @@ def register():
         user_type = data.get("user_type")
 
         if not user_type:
-            return jsonify({"error": "User type is required"}), 400
+            return handle_error("User type is required", 400)
 
         # Check for existing user before validation
         existing_user = User.find_user_by_email(data.get("email"))
         if existing_user:
-            return jsonify({"error": "Email already registered"}), 409
+            return handle_error("Email already registered", 409)
 
         # Validate and create user based on type
         if user_type == "individual":
@@ -48,16 +51,18 @@ def register():
             )
 
         else:
-            return jsonify({"error": "Invalid user type"}), 400
+            return handle_error("Invalid user type", 400)
 
         # Get the created user
         user = User.find_user_by_id(user_id)
         if not user:
-            raise ValueError("User not found after creation")
+            return handle_error("User not found after creation", 404)
 
-        # Generate tokens
-        access_token = generate_token(user)
-        refresh_token = generate_refresh_token(user)
+        user_id = str(user["_id"])
+
+        # Generate tokens using authhelper
+        access_token = create_access_token(identity=user_id, fresh=True)
+        refresh_token = create_refresh_token(identity=user_id)
 
         return (
             jsonify(
@@ -73,8 +78,8 @@ def register():
         )
 
     except ValidationError as err:
-        return jsonify({"error": "Validation failed", "details": err.messages}), 400
+        return handle_error("Validation failed", 400, details=err.messages)
     except ValueError as ve:
-        return jsonify({"error": str(ve)}), 400
+        return handle_error(str(ve), 400)
     except Exception as e:
-        return jsonify({"error": f"Registration failed: {str(e)}"}), 500
+        return handle_error(f"Registration failed: {str(e)}", 500)
